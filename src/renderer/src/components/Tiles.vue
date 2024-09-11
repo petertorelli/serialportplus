@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, nextTick } from 'vue';
+import { ref, reactive, nextTick } from 'vue';
 import { Buffer } from 'buffer';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
@@ -14,14 +14,104 @@ class DisplayWindowContext {
   cmd: string|null = null;
   baud: number = 115200;
   sendHex: boolean = false;
+  width_px: number = 700;
+  height_px: number = 250;
+  dragOffsetY: number = 0;
   constructor(path: string) {
     this.path = path;
     DisplayWindowContext.uuid++;
     this.myid = DisplayWindowContext.uuid;
   };
 }
+// 1x1 transparent pixel.  If we use a 0x0 image, Firefox
+// would ingore it and fallback to the default.
+const emptyImage = new Image(1, 1);
+emptyImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
 
+
+document.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'none'; })
 let portStatus = reactive(new Map<string, DisplayWindowContext>);
+
+
+let dragStartY = 0;
+let tStartY = 0;
+let dragStartX = 0;
+let tStartX = 0;
+
+document.addEventListener("dragstart", (event: DragEvent) => {
+  const path = event.target.dataset['windowid'];
+  const t = portStatus.get(path);
+  if (t) {
+    dragStartY = event.clientY;
+    tStartY = t.height_px;
+    dragStartX = event.clientX;
+    tStartX = t.width_px;
+  }
+  // prevent the weird "macOS globe", which means this may cause some lag
+  if (emptyImage.complete) {
+    event.dataTransfer.setDragImage(emptyImage, 0, 0);
+  }
+});
+
+document.addEventListener("drag", (event: DragEvent) => {
+  const path = event.target.dataset['windowid'];
+  const t = portStatus.get(path);
+  if (t) {
+    if (event.clientX > 0) {
+      let set = tStartX + (event.clientX - dragStartX);
+      if (set > 480) {
+        t.width_px = set;
+      }
+    }
+    if (event.clientY > 0) {
+      let set = tStartY + (event.clientY - dragStartY);
+      if (set > 200) {
+        t.height_px = set;
+      }
+    }
+  }
+});
+
+/*
+window.addEventListener("drag", (event: DragEvent) => {
+  console.log(event);
+  const path = event.target.dataset['windowid'];
+  const t = portStatus.get(path);
+  if (t) {
+    console.log(event.clientX, event.clientY);
+    if (event.clientX > 0) {
+      t.width_px = event.clientX;
+    }
+    if (event.clientY > 0) {
+      t.height_px = event.clientY;
+    }
+  }
+})
+  */
+
+function send_value(percent: number, path: string) {
+  console.log(percent, path);
+
+  let pwm = percent / 10 * 1000;
+
+  const data = Buffer.alloc(4);
+  data[0] = 0x55;
+  data[1] = 0x01;
+  data[2] = pwm >> 8;
+  data[3] = pwm & 0xff;
+
+  console.log(data);
+  window.serialport.writeToPort(path, data);
+}
+
+function reset(path: string) {
+  const data = Buffer.alloc(4);
+  data[0] = 0xaa;
+  data[1] = 0;
+  data[2] = 0
+  data[3] = 0;
+  window.serialport.writeToPort(path, data);
+}
 
 function scan() {
   window.serialport.list().then((paths: string[]) => {
@@ -136,6 +226,8 @@ defineExpose({
   togglePort,
   FontAwesomeIcon,
   fas,
+  send_value,
+  reset,
 });
 
 </script>
@@ -146,13 +238,17 @@ div
     font-awesome-icon(:icon="fas.faArrowRotateRight")
   .d-flex.flex-row.flex-wrap
     .m-2(v-for="[path, ctx] in portStatus")
-      div(style='width: 26rem').fixed-font
+      //- These should be their own *.vue elements to avoid lists of data!!
+      div(:style='{ width: ctx.width_px + "px"}' ref="'window_' + ctx.myid").fixed-font
         .ui-title {{ ctx.path }}
         .ui-controls.d-flex.flex-row.justify-content-between
           .m-1.d-inline-block
             .input-group.d-inline-flex
               select.form-select.w-auto.form-select-sm(:disabled='ctx.isOpen' v-model.number='ctx.baud')
                 option(value=9600) 9600
+                option(value=19200) 19200
+                option(value=38400) 38400
+                option(value=57600) 57600
                 option(value=115200 selected) 115200
               select.form-select.w-auto.form-select-sm(:disabled='ctx.isOpen')
                 option(selected) 8
@@ -172,7 +268,7 @@ div
           
           button.m-1.btn.btn-sm.btn-outline-secondary(@click="togglePort(path)" :disabled='ctx.isBusy' :title="ctx.isOpen ? 'Disconnect' : 'Connect'")
             font-awesome-icon(:icon="ctx.isOpen ? fas.faPlugCircleXmark : fas.faPlug")
-        .ui-output(:id="'console-output_' + ctx.myid")
+        .ui-output(:id="'console-output_' + ctx.myid" :style='{height: ctx.height_px + "px"}')
           div.output-line(
             v-for="line in ctx.content") {{ line }}
         .ui-input.d-flex
@@ -181,11 +277,26 @@ div
             @keydown="keyDown(path, $event)"
             v-model="ctx.cmd"
             :placeholder="ctx.sendHex ? 'Enter Hex bytes' : 'Enter Command'")
-          .form-check.ms-2.d-flex.align-items-center.h-100
+          .hex-switcher.form-check.ms-2.d-flex.align-items-center.h-100(title="Switch from ASCII to hexdecimal")
             input.form-check-input(:id="'console-input_hex_' + ctx.myid" type='checkbox' v-model="ctx.sendHex")
+          .p-2.d-flex.align-items-center.h-100(
+              :data-windowid="path"
+              title="resize"
+              draggable='true')
+            font-awesome-icon(:icon="fas.faCropSimple")
+        div
+          .m-2 Implementation controls
+          .m-2
+            button.me-2.btn.btn-primary.btn-sm(v-for='i in [...Array(11).keys()]' :data-percent="i/10"
+              @click="send_value(i, path)") {{ i }}
+          .m-2
+            button.btn.btn-primary.btn-sm(@click="reset(path)") Reset
 </template>
 
 <style>
+  html, body {
+    height: 100%;
+  }
   .fixed-font {
     font-family: Consolas, monospace;
   }
@@ -208,7 +319,6 @@ div
     padding-left: 0.75rem;
     padding-right: 0.75rem;
     background-color: white;
-    height: 25em;
     border: 1px solid var(--bs-tertiary-color);
     overflow-y: scroll;
     font-size: 9pt;
@@ -221,6 +331,11 @@ div
     border-top: 0;
     /* Without this, the <INPUT> doesn't fill the div at height: 100%. */
     height: 2rem;
+  }
+
+  .ui-input .hex-switcher {
+    border: 0px;
+    border-right: 1px solid var(--bs-tertiary-color)
   }
 
   /* Override bootstrap's highlighting for the input */
