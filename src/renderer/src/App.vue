@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import Tiles from './components/Tiles.vue'
+import { defineComponent } from 'vue';
+import TileManager from './components/TileManager.vue'
+
+defineComponent({
+  components: {
+    TileManager
+  }
+});
 </script>
 
 <template lang="pug">
-Tiles
+TileManager
 </template>

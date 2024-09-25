@@ -1,36 +1,56 @@
 import { contextBridge } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
 import { SerialPort, ReadlineParser } from 'serialport';
+import { usb } from 'usb';
+
+let g_changeCallback: () => void | undefined;
+
+usb.on('attach', () => {
+  if (g_changeCallback) {
+    g_changeCallback();
+  }
+});
+
+usb.on('detach', () => {
+  if (g_changeCallback) {
+    g_changeCallback();
+  }
+});
 
 let openPorts = new Map<string, SerialPort>;
 
 const serialportAPI = {
+  /* Only one callback is allowed. The owner of the callback is responsible
+  for updating thier internal state using the `list()` function. */
+  portlistChangeEvent: (cb: () => void | undefined) => {
+    g_changeCallback = cb;
+  },
   list: async () => {
     const ports = await SerialPort.list();
-    const paths = ports.map((port) => port.path);
+    const paths = new Set(ports.map((port) => port.path));
     return paths;
   },
-  createPort: async (path: string, baudRate: number, callback: any) => {
+  createPort: async (path: string, options: any, callback: any) => {
     if (openPorts.has(path)) {
       return;
     }
-    let port = new SerialPort({path, baudRate, autoOpen: false});
+    options.path = path;
+    let port = new SerialPort(options);
     const parser = new ReadlineParser();
     port.pipe(parser);
     parser.on('data', (data: string) => {
-      callback(path, "data", data);
+      callback("data", data);
     });
     port.on('error', err => {
-      callback(path, "error", err);
+      callback("error", err);
     });
     port.on('close', () => {
       openPorts.delete(path);
-      callback(path, "close");
+      callback("close");
     });
+    // Using resolve instead of reject on purpose to track err w/o catch.
     return new Promise<Error|null>(resolve => {
-      console.log("Open port in promose");
       port.open(err => {
-        console.log("Open callback: ", err);
         if (!err) {
           openPorts.set(path, port);
         }
