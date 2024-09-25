@@ -26,7 +26,16 @@ function scan() {
       console.log(path);
       // First check if we added any new ports...
       if (portStatus.has(path)) {
-        // didn't change ..
+        const x = portStatus.get(path);
+        if (x) {
+          // didn't change ..
+          if (x.message === 'init') {
+            console.log("was already there");
+          } else {
+            console.log("was dropped and readded");
+            x.message = 'reinit';
+          }
+        }
       } else {
         // added new port
         if (path.match(/usb/)) {

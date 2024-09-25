@@ -1,60 +1,61 @@
 <template lang="pug">
-  div(:style='{ width: ctx.width_px + "px"}').fixed-font
-    .ui-title {{ ctx.path }}
-    .ui-controls.d-flex.flex-row.justify-content-between
-      .m-1.d-inline-block
-        .input-group.d-inline-flex
-          select.form-select.w-auto.form-select-sm(:disabled='ctx.isOpen' v-model.number='ctx.baud')
-            option(value=9600) 9600
-            option(value=19200) 19200
-            option(value=38400) 38400
-            option(value=57600) 57600
-            option(value=115200 selected) 115200
-          select.form-select.w-auto.form-select-sm(:disabled='ctx.isOpen' v-model.number='ctx.dataBits')
-            option(selected) 8
-            option 9
-            option 10
-          select.form-select.w-auto.form-select-sm(:disabled='ctx.isOpen' v-model='ctx.parity')
-            option(value='none' selected) N
-            option(value='even') E
-            option(Value='odd') O
-          select.form-select.w-auto.form-select-sm(:disabled='ctx.isOpen' v-model.number='ctx.stopBits')
-            option(value=1 selected) 1
-            option(value=2) 2
-          select.form-select.w-auto.form-select-sm(:disabled='ctx.isOpen' v-model='ctx.ending')
-            option(value="" selected) None
-            option(value="\r") CR
-            option(value="\n") LF
-            option(value="\r\n") CRLF
-      button.m-1.btn.btn-sm.btn-outline-secondary(@click="togglePort(path)" :disabled='ctx.isBusy' :title="ctx.isOpen ? 'Disconnect' : 'Connect'")
-        font-awesome-icon(:icon="ctx.isOpen ? fas.faPlugCircleXmark : fas.faPlug")
-    .ui-output(ref='uiOutput' :style='{height: ctx.height_px + "px"}')
-      .output-line(v-for="line in ctx.content") {{ line }}
-    .ui-input.d-flex
-      input.w-100(
-        type="text"
-        @keydown="keyDown(path, $event)"
-        v-model="ctx.cmd"
-        :placeholder="ctx.sendHex ? 'Enter Hex bytes' : 'Enter Command'")
-      .hex-switcher.form-check.ms-2.d-flex.align-items-center.h-100(title="Switch from ASCII to hexdecimal")
-        input.form-check-input(type='checkbox' v-model="ctx.sendHex")
-      .p-2.d-flex.align-items-center.h-100(
-          :data-windowid="path"
-          title="resize"
-          draggable='true')
-        font-awesome-icon(:icon="fas.faCropSimple")
+
+div(:style='{ width: ctx.width_px + "px"}').fixed-font
+  .ui-title {{ ctx.path }} {{ ctx.dropped ? '- dropped' : '' }}
+  .ui-controls.d-flex.flex-row.justify-content-between
+    .m-1.d-inline-block
+      .input-group.d-inline-flex
+        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.baud')
+          option(value=9600) 9600
+          option(value=19200) 19200
+          option(value=38400) 38400
+          option(value=57600) 57600
+          option(value=115200 selected) 115200
+        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.dataBits')
+          option(selected) 8
+          option 9
+          option 10
+        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.parity')
+          option(value='none' selected) N
+          option(value='even') E
+          option(Value='odd') O
+        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.stopBits')
+          option(value=1 selected) 1
+          option(value=2) 2
+        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.ending')
+          option(value="" selected) None
+          option(value="\r") CR
+          option(value="\n") LF
+          option(value="\r\n") CRLF
+    button.m-1.btn.btn-sm.btn-outline-secondary(@click="togglePort(path)" :disabled='ctx.isBusy || ctx.dropped' :title="ctx.isOpen ? 'Disconnect' : 'Connect'")
+      font-awesome-icon(:icon="ctx.isOpen ? fas.faPlugCircleXmark : fas.faPlug")
+  .ui-output(ref='uiOutput' :style='{height: ctx.height_px + "px"}')
+    .output-line(v-for="line in ctx.content") {{ line }}
+  .ui-input.d-flex
+    input.w-100(
+      type="text"
+      @keydown="keyDown(path, $event)"
+      v-model="ctx.cmd"
+      :placeholder="ctx.sendHex ? 'Enter Hex bytes' : 'Enter Command'")
+    .hex-switcher.form-check.ms-2.d-flex.align-items-center.h-100(title="Switch from ASCII to hexdecimal")
+      input.form-check-input(type='checkbox' v-model="ctx.sendHex")
+    .p-2.d-flex.align-items-center.h-100(
+        :data-windowid="path"
+        title="resize"
+        draggable='true')
+      font-awesome-icon(:icon="fas.faCropSimple")
 </template>
 
 <script lang="ts" setup>
 
-import { defineExpose, defineProps, nextTick, reactive, ref } from 'vue';
+import { defineExpose, defineProps, nextTick, reactive, ref, watch } from 'vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 import { Buffer } from 'buffer';
 
 class DisplayWindowContext {
   path: string|undefined;
-  content: string[] = [ "foo" ];
+  content: string[] = [];
   isOpen: boolean = false;
   isBusy: boolean = false;
   cmd: string|null = null;
@@ -67,14 +68,45 @@ class DisplayWindowContext {
   width_px: number = 700;
   height_px: number = 250;
   dragOffsetY: number = 0;
+  dropped: boolean = false;
+  disabled: boolean = false;
   constructor(path: string) {
     this.path = path;
   };
 }
 
-const props = defineProps(['path']);
+const props = defineProps(['path', 'message']);
 const ctx = reactive(new DisplayWindowContext(props.path));
 const uiOutput = ref(null);
+
+watch(() => props.message, message => {
+  console.log("message", message);
+  if (message === 'dropped') {
+    ctx.dropped = true;
+  } else if (message === 'reinit') {
+    ctx.dropped = false;
+  }
+});
+
+
+// make disabled computed...
+
+watch(() => ctx.isOpen, isOpen => {
+  if (isOpen) {
+    ctx.disabled = true;
+  } else {
+    ctx.disabled = false;
+  }
+});
+
+watch(() => ctx.dropped, dropped => {
+  if (dropped) {
+    ctx.disabled = true;
+  } else {
+    ctx.disabled = false;
+  }
+})
+
 
 let dragStartY = 0;
 let tStartY = 0;
@@ -155,6 +187,7 @@ function eventHandler(event: string, data: Error|string|null) {
     scrollToBottomNext();
   }
 }
+
 
 function togglePort(path: string) {
   ctx.isBusy = true;
