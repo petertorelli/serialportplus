@@ -1,33 +1,37 @@
 <template lang="pug">
-
-div(:style='{ width: ctx.width_px + "px"}').fixed-font
+mixin settingSelect
+  .input-group.d-inline-flex
+    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.baud')
+      option(value=9600) 9600
+      option(value=19200) 19200
+      option(value=38400) 38400
+      option(value=57600) 57600
+      option(value=115200 selected) 115200
+    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.dataBits')
+      option(selected) 8
+      option 9
+      option 10
+    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.parity')
+      option(value='none' selected) N
+      option(value='even') E
+      option(Value='odd') O
+    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.stopBits')
+      option(value=1 selected) 1
+      option(value=2) 2
+    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.ending')
+      option(value="" selected) None
+      option(value="\r") CR
+      option(value="\n") LF
+      option(value="\r\n") CRLF
+    
+.fixed-font(v-if='ctx.isVisible' :style='{ width: ctx.width_px + "px"}')
   .ui-title {{ ctx.path }} {{ ctx.dropped ? '- dropped' : '' }}
   .ui-controls.d-flex.flex-row.justify-content-between
     .m-1.d-inline-block
-      .input-group.d-inline-flex
-        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.baud')
-          option(value=9600) 9600
-          option(value=19200) 19200
-          option(value=38400) 38400
-          option(value=57600) 57600
-          option(value=115200 selected) 115200
-        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.dataBits')
-          option(selected) 8
-          option 9
-          option 10
-        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.parity')
-          option(value='none' selected) N
-          option(value='even') E
-          option(Value='odd') O
-        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.stopBits')
-          option(value=1 selected) 1
-          option(value=2) 2
-        select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.ending')
-          option(value="" selected) None
-          option(value="\r") CR
-          option(value="\n") LF
-          option(value="\r\n") CRLF
-    button.m-1.btn.btn-sm.btn-outline-secondary(@click="togglePort(path)" :disabled='ctx.isBusy || ctx.dropped' :title="ctx.isOpen ? 'Disconnect' : 'Connect'")
+      +settingSelect
+    button.m-1.btn.btn-sm.btn-outline-secondary(
+      @click="togglePort(path)" :disabled='ctx.isBusy || ctx.dropped'
+      :title="ctx.isOpen ? 'Disconnect' : 'Connect'")
       font-awesome-icon(:icon="ctx.isOpen ? fas.faPlugCircleXmark : fas.faPlug")
   .ui-output(ref='uiOutput' :style='{height: ctx.height_px + "px"}')
     .output-line(v-for="line in ctx.content") {{ line }}
@@ -36,8 +40,9 @@ div(:style='{ width: ctx.width_px + "px"}').fixed-font
       type="text"
       @keydown="keyDown(path, $event)"
       v-model="ctx.cmd"
-      :placeholder="ctx.sendHex ? 'Enter Hex bytes' : 'Enter Command'")
-    .hex-switcher.form-check.ms-2.d-flex.align-items-center.h-100(title="Switch from ASCII to hexdecimal")
+      :placeholder="ctx.sendHex ? 'Enter Hex bytes' : 'Enter Text'")
+    .hex-switcher.form-check.ms-2.d-flex.align-items-center.h-100(
+      title="Switch from ASCII to hexdecimal")
       input.form-check-input(type='checkbox' v-model="ctx.sendHex")
     .p-2.d-flex.align-items-center.h-100(
         :data-windowid="path"
@@ -70,6 +75,7 @@ class DisplayWindowContext {
   dragOffsetY: number = 0;
   dropped: boolean = false;
   disabled: boolean = false;
+  isVisible: boolean = true;
   constructor(path: string) {
     this.path = path;
   };
@@ -85,9 +91,12 @@ watch(() => props.message, message => {
     ctx.dropped = true;
   } else if (message === 'reinit') {
     ctx.dropped = false;
+  } else if (message === 'hide') {
+    ctx.isVisible = false;
+  } else if (message === 'show') {
+    ctx.isVisible = true;
   }
 });
-
 
 // make disabled computed...
 
@@ -107,6 +116,7 @@ watch(() => ctx.dropped, dropped => {
   }
 })
 
+// seems a bit excessive to keep adding event listeners do DOM.document...
 
 let dragStartY = 0;
 let tStartY = 0;
@@ -125,6 +135,9 @@ emptyImage.src
 document.addEventListener('dragstart', (event: DragEvent) => {
   const target = event.target as HTMLElement;
   const windowId = target.dataset['windowid'];
+  if (windowId !== props.path) {
+    return;
+  }
   if (typeof windowId === 'string') {
     dragStartY = event.clientY;
     tStartY = ctx.height_px;
@@ -148,18 +161,23 @@ document.addEventListener("drag", (event: DragEvent) => {
   const target = event.target as HTMLElement;
   const windowId = target.dataset['windowid'];
 
-  if (typeof windowId === 'string') {
-    if (event.clientX > 0) {
-      let set = tStartX + (event.clientX - dragStartX);
-      if (set > 480) {
-        ctx.width_px = set;
-      }
+  if (windowId !== props.path) {
+    return;
+  }
+  if (event.clientX > 0) {
+    let set = tStartX + (event.clientX - dragStartX);
+    if (set > 480) {
+      ctx.width_px = set;
+    } else {
+      ctx.width_px = 480;
     }
-    if (event.clientY > 0) {
-      let set = tStartY + (event.clientY - dragStartY);
-      if (set > 200) {
-        ctx.height_px = set;
-      }
+  }
+  if (event.clientY > 0) {
+    let set = tStartY + (event.clientY - dragStartY);
+    if (set > 200) {
+      ctx.height_px = set;
+    } else {
+      ctx.height_px = 200;
     }
   }
 });
