@@ -23,9 +23,22 @@ mixin settingSelect
       option(value="\r") CR
       option(value="\n") LF
       option(value="\r\n") CRLF
-    
+
 .fixed-font(v-if='ctx.isVisible' :style='{ width: ctx.width_px + "px"}')
-  .ui-title {{ ctx.path }} {{ ctx.dropped ? '- dropped' : '' }}
+  .ui-title(:style='{ background: backgroundColor }')
+    .d-flex.justify-content-between
+      .mx-2 {{ ctx.path }} {{ ctx.dropped ? '- dropped' : '' }}
+      .mx-2.dropdown
+        i(style='color: black;' @click="toggleDropdown" href='#' role="button" data-bs-toggle="dropdown") &#9633;
+        ul.dropdown-menu(ref="dropdownMenu")
+          li
+            div
+              span.m-2(
+                v-for='color in colors'
+                @click="changeColor(color)"
+                style='cursor: pointer;'
+                :style='{color: color}') &#x25A0;
+
   .ui-controls.d-flex.flex-row.justify-content-between
     .m-1.d-inline-block
       +settingSelect
@@ -79,7 +92,18 @@ class DisplayWindowContext {
   constructor(path: string) {
     this.path = path;
   };
+  
 }
+const colors = ["#eee",
+  "salmon",
+  "orange",
+  "wheat",
+  "lightgreen",
+  "lightblue",
+  "orchid",
+];
+
+let backgroundColor = ref("#eee");
 
 const props = defineProps(['path', 'message']);
 const ctx = reactive(new DisplayWindowContext(props.path));
@@ -115,6 +139,12 @@ watch(() => ctx.dropped, dropped => {
     ctx.disabled = false;
   }
 })
+
+function changeColor(color: string) {
+  backgroundColor.value = color;
+  // update localStorage for path
+}
+
 
 // seems a bit excessive to keep adding event listeners do DOM.document...
 
@@ -274,6 +304,8 @@ defineExpose({
   fas,
   togglePort,
   keyDown,
+  backgroundColor,
+  changeColor,
 });
 
 </script>
@@ -289,8 +321,6 @@ defineExpose({
   .ui-title {
     border-radius: 5px 5px 0px 0px;
     border: 1px solid var(--bs-tertiary-color);
-    text-align: center;
-    background-color: #eee;
   }
 
   .ui-controls {
@@ -345,5 +375,4 @@ defineExpose({
   .form-check-input {
     margin-top: 0;
   }
-
 </style>

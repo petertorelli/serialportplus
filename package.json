@@ -1,10 +1,10 @@
 {
-  "name": "electron-app",
+  "name": "serialportplus-app",
   "version": "1.0.0",
-  "description": "An Electron application with Vue and TypeScript",
+  "description": "A Serial Port Manager",
   "main": "./out/main/index.js",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": "peter.j.torelli@gmail.com",
+  "homepage": "https://githib.com/petertorelli",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint . --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts,.vue --fix",
@@ -42,6 +42,7 @@
     "@vitejs/plugin-vue": "^5.0.5",
     "@vue/eslint-config-prettier": "^9.0.0",
     "@vue/eslint-config-typescript": "^13.0.0",
+    "@vue/language-plugin-pug": "^2.1.6",
     "electron": "^31.0.2",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",

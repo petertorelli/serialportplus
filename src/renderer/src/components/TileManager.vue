@@ -77,14 +77,12 @@ defineComponent({
   }
 });
 
-
 function toggleVisibility(path: string) {
   if (path in invisibilityDict) {
     invisibilityDict[path] = invisibilityDict[path] === 'hide' ? 'show' : 'hide';
   } else {
     invisibilityDict[path] = 'hide';
   }
-  console.log(invisibilityDict[path])
   localStorage.setItem(`invisible-${path}`, invisibilityDict[path]);
   let p = portStatus.get(path);
   if (p) {
@@ -103,9 +101,9 @@ defineExpose({
 </script>
 
 <template lang="pug">
-nav.navbar.navbar-expand-lg(style='background-color: #e3f2fd;')
+nav.navbar.navbar-expand-sm(style='background-color: #eee;')
   .container-fluid
-    a.navbar-brand(href='#') SerialPort+
+    .navbar-brand(href='#') SerialPort+
     ul.navbar-nav.me-auto.mb-lg-0
       li.nav-item
         button.btn(@click="scan()") Rescan
@@ -129,7 +127,7 @@ div
   b.text-danger.m-2(v-if="portStatus.size === 0") No serial ports detected.
   .d-flex.flex-wrap(v-else)
     div(v-for="[path, data] in portStatus")
-      PortTile.p-2(:path="path" :message="data.message")
+      PortTile.p-2(v-if='invisibilityDict[path] === "show"' :path="path" :message="data.message")
 </template>
 
 <style>
