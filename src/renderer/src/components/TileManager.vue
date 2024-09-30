@@ -42,15 +42,7 @@ function scan() {
       } else {
         // added new port
         portStatus.set(path, new PortData);
-        const key = `invisible-${path}`;
-        let lsInvisible = localStorage.getItem(key);
-        console.log("local storage", path, lsInvisible);
-        if (lsInvisible === null) {
-          localStorage.setItem(key, "show");
-        } else {
-          invisibilityDict[path] = lsInvisible;
-          // uh-oh... state is getting confusing now!!!
-        }
+        invisibilityDict[path] = false;
       }
     });
     portStatus.forEach((value, key) => {
@@ -77,16 +69,21 @@ defineComponent({
   }
 });
 
-function toggleVisibility(path: string) {
-  if (path in invisibilityDict) {
-    invisibilityDict[path] = invisibilityDict[path] === 'hide' ? 'show' : 'hide';
-  } else {
-    invisibilityDict[path] = 'hide';
+function toggleVisibility(port: string) {
+  invisibilityDict[port] = !invisibilityDict[port];
+  const ps = portStatus.get(port);
+  if (ps) {
+    ps.message = invisibilityDict[port] ? "hide" : "show";
   }
-  localStorage.setItem(`invisible-${path}`, invisibilityDict[path]);
-  let p = portStatus.get(path);
-  if (p) {
-    p.message = invisibilityDict[path];
+}
+
+function unhideAll() {
+  for (let p in invisibilityDict) {
+    invisibilityDict[p] = false;
+    const ps = portStatus.get(p);
+    if (ps) {
+      ps.message = invisibilityDict[p] ? "hide" : "show";
+    }
   }
 }
 
@@ -95,40 +92,46 @@ defineExpose({
   fas,
   Dropdown,
   toggleVisibility,
+  unhideAll,
 });
-
 
 </script>
 
 <template lang="pug">
-nav.navbar.navbar-expand-sm(style='background-color: #eee;')
-  .container-fluid
-    .navbar-brand(href='#') SerialPort+
-    ul.navbar-nav.me-auto.mb-lg-0
-      li.nav-item
-        button.btn(@click="scan()") Rescan
-      li.nav-item.dropdown
-        button.btn.dropdown-toggle(@click="toggleDropdown" href='#' role="button" data-bs-toggle="dropdown"
-        ) Visibility
-        ul.dropdown-menu(ref="dropdownMenu")
-          li(v-for="[path, data] in portStatus")
-            a.dropdown-item(
-              href='#'
-              @click='toggleVisibility(path)'
-              :class="{ 'text-body-tertiary' : invisibilityDict[path] === 'hide'}"
-              ) {{ path }}
-          li
-            hr.dropdown.divider
-          li
-            a.dropdown-item(href="#") Unhide all
+table.border-bottom(style='background-color: #eee;' width="100%")
+  row
+    td
+      .mx-2(style='font-size: 1.5rem;' valign=middle).m-2 SerialPort+
+    td.pointer(valign='middle')
+      .m-2(@click="scan()") Rescan
+    td.pointer(valign='middle')
+      .mx-2.dropdown-toggle(
+        valign='middle'
+        data-bs-toggle="dropdown"
+      ) Visibility
+      ul.dropdown-menu(ref="dropdownMenu")
+        li(v-for="[path, data] in portStatus")
+          a.dropdown-item(
+            href='#'
+            @click='toggleVisibility(path)'
+            :class="{ 'text-body-tertiary' : invisibilityDict[path] === true}"
+            ) {{ path }}
+        li
+          hr.dropdown.divider
+        li
+          a.dropdown-item(href="#" @click='unhideAll()') Unhide all
+
 div
   //-button.m-2.btn.btn-sm.btn-primary(@click="scan" title="Re-scan serialports")
     font-awesome-icon(:icon="fas.faArrowRotateRight")
   b.text-danger.m-2(v-if="portStatus.size === 0") No serial ports detected.
   .d-flex.flex-wrap(v-else)
     div(v-for="[path, data] in portStatus")
-      PortTile.p-2(v-if='invisibilityDict[path] === "show"' :path="path" :message="data.message")
+      PortTile.p-2(:path="path" :message="data.message")
 </template>
 
 <style>
+.pointer {
+  cursor: pointer;
+}
 </style>

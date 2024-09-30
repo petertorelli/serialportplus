@@ -1,4 +1,5 @@
 <template lang="pug">
+
 mixin settingSelect
   .input-group.d-inline-flex
     select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.baud')
@@ -24,11 +25,14 @@ mixin settingSelect
       option(value="\n") LF
       option(value="\r\n") CRLF
 
-.fixed-font(v-if='ctx.isVisible' :style='{ width: ctx.width_px + "px"}')
-  .ui-title(:style='{ background: backgroundColor }')
+mixin titleBlock
+  .ui-title(:style='{ background: ctx.backgroundColor }')
     .d-flex.justify-content-between
-      .mx-2 {{ ctx.path }} {{ ctx.dropped ? '- dropped' : '' }}
-      .mx-2.dropdown
+      .ms-2.td {{ ctx.path }} {{ ctx.dropped ? '- dropped' : '' }}
+      input.renamer(type='text' placeholder='<Rename>'
+        :style='{ background: ctx.backgroundColor }'
+        v-model='ctx.alternateTitle')
+      .me-2.dropdown
         i(style='color: black;' @click="toggleDropdown" href='#' role="button" data-bs-toggle="dropdown") &#9633;
         ul.dropdown-menu(ref="dropdownMenu")
           li
@@ -39,6 +43,8 @@ mixin settingSelect
                 style='cursor: pointer;'
                 :style='{color: color}') &#x25A0;
 
+.fixed-font(v-if='ctx.isVisible' :style='{ width: ctx.width_px + "px"}')
+  +titleBlock
   .ui-controls.d-flex.flex-row.justify-content-between
     .m-1.d-inline-block
       +settingSelect
@@ -85,15 +91,16 @@ class DisplayWindowContext {
   sendHex: boolean = false;
   width_px: number = 700;
   height_px: number = 250;
-  dragOffsetY: number = 0;
   dropped: boolean = false;
   disabled: boolean = false;
   isVisible: boolean = true;
+  alternateTitle: string|null = null;
+  backgroundColor: string = '#eee';
   constructor(path: string) {
     this.path = path;
   };
-  
-}
+};
+
 const colors = ["#eee",
   "salmon",
   "orange",
@@ -102,8 +109,6 @@ const colors = ["#eee",
   "lightblue",
   "orchid",
 ];
-
-let backgroundColor = ref("#eee");
 
 const props = defineProps(['path', 'message']);
 const ctx = reactive(new DisplayWindowContext(props.path));
@@ -141,10 +146,9 @@ watch(() => ctx.dropped, dropped => {
 })
 
 function changeColor(color: string) {
-  backgroundColor.value = color;
-  // update localStorage for path
+  ctx.backgroundColor = color;
+  // considering localStorage, hence the function.
 }
-
 
 // seems a bit excessive to keep adding event listeners do DOM.document...
 
@@ -236,7 +240,6 @@ function eventHandler(event: string, data: Error|string|null) {
   }
 }
 
-
 function togglePort(path: string) {
   ctx.isBusy = true;
   if (ctx.isOpen) {
@@ -304,8 +307,8 @@ defineExpose({
   fas,
   togglePort,
   keyDown,
-  backgroundColor,
   changeColor,
+  colors,
 });
 
 </script>
@@ -359,20 +362,31 @@ defineExpose({
     outline: none;
   }
 
-  .ui-input input[type='text'] {
-    padding-left: 0.75rem;
-    width: 100%;
-    height: 100%;
-    border-radius: 0px 0px 0px 5px;
-    border: 0px;
-    border-right: 1px solid var(--bs-tertiary-color)
-  }
+input.renamer[type='text'] {
+  border: 0px;
+  color: blue;
+}
 
-  /* These two are necessary to vertically mid-align the checkboxes */
-  .form-check {
-    margin-bottom: 0;
-  }
-  .form-check-input {
-    margin-top: 0;
-  }
+input.renamer:focus[type='text'] {
+  border: 0px;
+  color:blue;
+  outline-width: 0;
+}
+
+.ui-input input[type='text'] {
+  padding-left: 0.75rem;
+  width: 100%;
+  height: 100%;
+  border-radius: 0px 0px 0px 5px;
+  border: 0px;
+  border-right: 1px solid var(--bs-tertiary-color)
+}
+
+/* These two are necessary to vertically mid-align the checkboxes */
+.form-check {
+  margin-bottom: 0;
+}
+.form-check-input {
+  margin-top: 0;
+}
 </style>
