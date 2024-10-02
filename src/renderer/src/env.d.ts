@@ -1,3 +1,5 @@
+/* Copyright (C) 2024 Peter Torelli <peter.j.torelli@gmail.com> */
+
 /// <reference types="vite/client" />
 
 declare module '*.vue' {

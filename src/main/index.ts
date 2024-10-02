@@ -1,3 +1,5 @@
+/* Copyright (C) 2024 Peter Torelli <peter.j.torelli@gmail.com> */
+
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'

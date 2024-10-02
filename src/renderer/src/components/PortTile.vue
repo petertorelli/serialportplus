@@ -1,3 +1,5 @@
+<!-- Copyright (C) 2024 Peter Torelli <peter.j.torelli@gmail.com> -->
+
 <template lang="pug">
 
 mixin settingSelect

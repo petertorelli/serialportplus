@@ -1,3 +1,5 @@
+/* Copyright (C) 2024 Peter Torelli <peter.j.torelli@gmail.com> */
+
 import { contextBridge } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
 import { SerialPort, ReadlineParser } from 'serialport';

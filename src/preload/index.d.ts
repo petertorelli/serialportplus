@@ -1,3 +1,5 @@
+/* Copyright (C) 2024 Peter Torelli <peter.j.torelli@gmail.com> */
+
 import { ElectronAPI } from '@electron-toolkit/preload'
 
 declare global {

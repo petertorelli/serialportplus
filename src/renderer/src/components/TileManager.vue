@@ -1,3 +1,5 @@
+<!-- Copyright (C) 2024 Peter Torelli <peter.j.torelli@gmail.com> -->
+
 <script setup lang="ts">
 /**
  * This tile manager handles addition and removal of port tiles. One serial
