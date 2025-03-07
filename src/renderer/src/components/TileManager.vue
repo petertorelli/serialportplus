@@ -44,7 +44,17 @@ function scan() {
       } else {
         // added new port
         portStatus.set(path, new PortData);
-        invisibilityDict[path] = false;
+        let key = "port_" + path;
+        if (window.localStorage.getItem(key) == null) {
+          window.localStorage.setItem(key, "false");
+          invisibilityDict[path] = false;
+        } else {
+          invisibilityDict[path] = window.localStorage.getItem(key) == "true" ? true : false;
+        }
+        const ps = portStatus.get(path);
+        if (ps) {
+          ps.message = invisibilityDict[path] ? "hide" : "show";
+        }
       }
     });
     portStatus.forEach((value, key) => {
@@ -73,6 +83,9 @@ defineComponent({
 
 function toggleVisibility(port: string) {
   invisibilityDict[port] = !invisibilityDict[port];
+  let key = "port_" + port;
+  window.localStorage.setItem(key, invisibilityDict[port] ? 'true' : 'false');
+  console.log(localStorage)
   const ps = portStatus.get(port);
   if (ps) {
     ps.message = invisibilityDict[port] ? "hide" : "show";
@@ -82,6 +95,8 @@ function toggleVisibility(port: string) {
 function unhideAll() {
   for (let p in invisibilityDict) {
     invisibilityDict[p] = false;
+    let key = "port_" + p;
+    window.localStorage.setItem(key, 'false');
     const ps = portStatus.get(p);
     if (ps) {
       ps.message = invisibilityDict[p] ? "hide" : "show";
@@ -101,7 +116,7 @@ defineExpose({
 
 <template lang="pug">
 table.border-bottom(style='background-color: #eee;' width="100%")
-  row
+  div
     td
       .mx-2(style='font-size: 1.5rem;' valign=middle).m-2 SerialPort+
     td.pointer(valign='middle')

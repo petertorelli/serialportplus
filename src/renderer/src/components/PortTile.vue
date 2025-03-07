@@ -65,6 +65,7 @@ mixin titleBlock
     .hex-switcher.form-check.ms-2.d-flex.align-items-center.h-100(
       title="Switch from ASCII to hexdecimal")
       input.form-check-input(type='checkbox' v-model="ctx.sendHex")
+    .px-2.clear.d-flex.align-items-center.h-100(role='button' @click="ctx.content = []") clr
     .p-2.d-flex.align-items-center.h-100(
         :data-windowid="path"
         title="resize"
@@ -103,7 +104,8 @@ class DisplayWindowContext {
   };
 };
 
-const colors = ["#eee",
+const colors = [
+  "#eee",
   "salmon",
   "orange",
   "wheat",
@@ -116,7 +118,7 @@ const props = defineProps(['path', 'message']);
 const ctx = reactive(new DisplayWindowContext(props.path));
 const uiOutput = ref(null);
 
-watch(() => props.message, message => {
+function parseMessage(message: string) {
   console.log("message", message);
   if (message === 'dropped') {
     ctx.dropped = true;
@@ -127,6 +129,12 @@ watch(() => props.message, message => {
   } else if (message === 'show') {
     ctx.isVisible = true;
   }
+}
+
+parseMessage(props.message);
+
+watch(() => props.message, message => {
+  parseMessage(message);
 });
 
 // make disabled computed...
@@ -355,6 +363,10 @@ defineExpose({
 
   .ui-input .hex-switcher {
     border: 0px;
+    border-right: 1px solid var(--bs-tertiary-color)
+  }
+
+  .ui-input .clear {
     border-right: 1px solid var(--bs-tertiary-color)
   }
 
