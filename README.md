@@ -17,7 +17,6 @@ Features:
 I wrote a pretty complex Electron GUI for my last job at EEMBC in 2018. I used a bunch of frameworks, scaffolding, pacakges, and tools that have been updated so many times that the original doesn't even compile anymore. Curse of JavaScript frameworks. So I started again with the latest tools (almost 5 years later!). Tools I like to use are:
 
 * Electron
-* Vite (hotloading open serial ports is a bad idea)
 * Vue
 * TypeScript
 * Pug
