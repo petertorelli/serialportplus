@@ -1,6 +1,7 @@
-<img src="https://github.com/petertorelli/serialportplus/blob/main/images/port-cereal.png" width="320px" />
 
 # Overview
+
+<img src="https://github.com/petertorelli/serialportplus/blob/main/images/port-cereal.png" width="160px" />
 
 This app lets you connect to as many serial devices are plugged into your machine, each in their own little panel. This is useful for me since I often have lots of gadgets I'm building plugged into a hub, and opening tons of pyserial-term or Putty windows is a pain in the ass. Instead we get this now:
 
