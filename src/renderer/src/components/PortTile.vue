@@ -2,30 +2,48 @@
 
 <template lang="pug">
 
-mixin settingSelect
-  .input-group.d-inline-flex
-    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.baud')
-      option(value=9600) 9600
-      option(value=19200) 19200
-      option(value=38400) 38400
-      option(value=57600) 57600
-      option(value=115200 selected) 115200
-    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.dataBits')
-      option(selected) 8
-      option 9
-      option 10
-    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.parity')
-      option(value='none' selected) N
-      option(value='even') E
-      option(Value='odd') O
-    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.stopBits')
-      option(value=1 selected) 1
-      option(value=2) 2
-    select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.ending')
-      option(value="" selected) None
-      option(value="\r") CR
-      option(value="\n") LF
-      option(value="\r\n") CRLF
+mixin controlUartConfig
+  .m-1.d-inline-block
+    .input-group.d-inline-flex
+      select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.baud')
+        option(value=9600) 9600
+        option(value=19200) 19200
+        option(value=38400) 38400
+        option(value=57600) 57600
+        option(value=115200 selected) 115200
+      select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.dataBits')
+        option(selected) 8
+        option 9
+        option 10
+      select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.parity')
+        option(value='none' selected) N
+        option(value='even') E
+        option(Value='odd') O
+      select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model.number='ctx.stopBits')
+        option(value=1 selected) 1
+        option(value=2) 2
+      select.form-select.w-auto.form-select-sm(:disabled='ctx.disabled' v-model='ctx.ending')
+        option(value="" selected) None
+        option(value="\r") CR
+        option(value="\n") LF
+        option(value="\r\n") CRLF
+
+mixin colorChanger
+  .dropdown
+    i(
+      title="Change menubar color"
+      @click="toggleDropdown"
+      href='#'
+      role="button"
+      data-bs-toggle="dropdown") &#x1F3A8;
+    ul.dropdown-menu(ref="dropdownMenu")
+      li
+        div
+          span.m-2(
+            v-for='color in colors'
+            @click="changeColor(color)"
+            style='cursor: pointer;'
+            :style='{color: color}') &#x25A0;
 
 mixin titleBlock
   .ui-title(:style='{ background: ctx.backgroundColor }')
@@ -34,43 +52,56 @@ mixin titleBlock
       input.renamer(type='text' placeholder='<Rename>'
         :style='{ background: ctx.backgroundColor }'
         v-model='ctx.alternateTitle')
-      .me-2.dropdown
-        i(style='color: black;' @click="toggleDropdown" href='#' role="button" data-bs-toggle="dropdown") &#9633;
-        ul.dropdown-menu(ref="dropdownMenu")
-          li
-            div
-              span.m-2(
-                v-for='color in colors'
-                @click="changeColor(color)"
-                style='cursor: pointer;'
-                :style='{color: color}') &#x25A0;
+      .me-2
+        +colorChanger
+
+mixin controlAsciiToHex
+  .ms-2.form-check.d-flex.align-items-center.h-100(
+    title="Switch from ASCII to hexdecimal")
+    input.form-check-input(type='checkbox' v-model="ctx.sendHex")
+
+mixin controlClearOutput
+  .px-2.d-flex.align-items-center.h-100(
+    role='button'
+    @click="ctx.content = []"
+    title="Clear data.") &#x1F5D1;
+
+mixin controlDragger
+  .p-2.d-flex.align-items-center.h-100(
+      :data-windowid="path"
+      title="Resize"
+      draggable='true')
+    font-awesome-icon(:icon="fas.faCropSimple")
+
+mixin controlInputLine
+  input.w-100(
+    type="text"
+    @keydown="keyDown(path, $event)"
+    v-model="ctx.cmd"
+    :placeholder="ctx.sendHex ? 'Enter Hex bytes' : 'Enter Text'")
+
+mixin controlTogglePort
+  button.m-1.btn.btn-sm.btn-outline-secondary(
+    @click="togglePort(path)" :disabled='ctx.isBusy || ctx.dropped'
+    :title="ctx.isOpen ? 'Disconnect' : 'Connect'")
+    font-awesome-icon(:icon="ctx.isOpen ? fas.faPlugCircleXmark : fas.faPlug")
 
 .fixed-font(v-if='ctx.isVisible' :style='{ width: ctx.width_px + "px"}')
   +titleBlock
-  .ui-controls.d-flex.flex-row.justify-content-between
-    .m-1.d-inline-block
-      +settingSelect
-    button.m-1.btn.btn-sm.btn-outline-secondary(
-      @click="togglePort(path)" :disabled='ctx.isBusy || ctx.dropped'
-      :title="ctx.isOpen ? 'Disconnect' : 'Connect'")
-      font-awesome-icon(:icon="ctx.isOpen ? fas.faPlugCircleXmark : fas.faPlug")
+  .ui-controls.d-flex.justify-content-between
+    +controlUartConfig
+    +controlTogglePort
   .ui-output(ref='uiOutput' :style='{height: ctx.height_px + "px"}')
     .output-line(v-for="line in ctx.content") {{ line }}
   .ui-input.d-flex
-    input.w-100(
-      type="text"
-      @keydown="keyDown(path, $event)"
-      v-model="ctx.cmd"
-      :placeholder="ctx.sendHex ? 'Enter Hex bytes' : 'Enter Text'")
-    .hex-switcher.form-check.ms-2.d-flex.align-items-center.h-100(
-      title="Switch from ASCII to hexdecimal")
-      input.form-check-input(type='checkbox' v-model="ctx.sendHex")
-    .px-2.clear.d-flex.align-items-center.h-100(role='button' @click="ctx.content = []") clr
-    .p-2.d-flex.align-items-center.h-100(
-        :data-windowid="path"
-        title="resize"
-        draggable='true')
-      font-awesome-icon(:icon="fas.faCropSimple")
+    .flex-grow-1
+      +controlInputLine
+    div
+      +controlAsciiToHex
+    div
+      +controlClearOutput
+    div
+      +controlDragger
 </template>
 
 <script lang="ts" setup>
@@ -238,6 +269,10 @@ function scrollToBottomNext() {
 function eventHandler(event: string, data: Error|string|null) {
   if (event === "data") {
     ctx.content.push(data as string);
+    // TODO: Magic number (make configurable)
+    if (ctx.content.length > 5000) {
+      ctx.content.shift();
+    }
     scrollToBottomNext();
   } else if (event === "close") {
     ctx.isOpen = false;
@@ -361,14 +396,6 @@ defineExpose({
     height: 2rem;
   }
 
-  .ui-input .hex-switcher {
-    border: 0px;
-    border-right: 1px solid var(--bs-tertiary-color)
-  }
-
-  .ui-input .clear {
-    border-right: 1px solid var(--bs-tertiary-color)
-  }
 
   /* Override bootstrap's highlighting for the input */
   .ui-input input[type='text']:focus {
@@ -393,7 +420,10 @@ input.renamer:focus[type='text'] {
   height: 100%;
   border-radius: 0px 0px 0px 5px;
   border: 0px;
-  border-right: 1px solid var(--bs-tertiary-color)
+}
+
+.ui-input.d-flex > :not(:last-child) {
+  border-right: 1px solid var(--bs-tertiary-color);
 }
 
 /* These two are necessary to vertically mid-align the checkboxes */
